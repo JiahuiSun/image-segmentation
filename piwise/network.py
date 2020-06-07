@@ -6,6 +6,61 @@ import torch.nn.functional as F
 from torch.utils import model_zoo
 from torchvision import models
 
+
+class vgg1(nn.Module):
+    def __init__(self):
+        super(vgg1, self).__init__()
+        vgg = models.vgg16(pretrained = True)
+        self.conv1_1 = vgg.features[0]
+        self.conv1_2 = vgg.features[2]
+        self.conv2_1 = vgg.features[5]
+        self.conv2_2 = vgg.features[7]
+        self.conv3_1 = vgg.features[10]
+        self.conv3_2 = vgg.features[12]
+        self.conv3_3 = vgg.features[14]
+        self.conv4_1 = vgg.features[17]
+        self.conv4_2 = vgg.features[19]
+        self.conv4_3 = vgg.features[21]
+        self.conv5_1 = vgg.features[24]
+        self.conv5_2 = vgg.features[26]
+        self.conv5_3 = vgg.features[28]
+        self.pool = nn.MaxPool2d(2, 2)
+
+    def forward(self,x):
+        x = F.relu(self.conv1_1(x))
+        x = F.relu(self.conv1_2(x))
+        x = self.pool(x)
+        x = F.relu(self.conv2_1(x))
+        x = F.relu(self.conv2_2(x))
+        x = self.pool(x)
+        x = F.relu(self.conv3_1(x))
+        x = F.relu(self.conv3_2(x))
+        x = F.relu(self.conv3_3(x))
+        x = self.pool(x)
+        x = F.relu(self.conv4_1(x))
+        x = F.relu(self.conv4_2(x))
+        x = F.relu(self.conv4_3(x))
+        # x = self.pool(x)
+        x = F.relu(self.conv5_1(x))
+        x = F.relu(self.conv5_2(x))
+        x = F.relu(self.conv5_3(x))
+        # x = self.pool(x)
+        return x
+
+class ZZ16(nn.Module):
+    def __init__(self, num_classes):
+        super(ZZ16, self).__init__()
+        self.v = vgg1()
+        self.conv = nn.Conv2d(512, num_classes, 1, 1, 0)
+        self.upsample = nn.Upsample((256, 256), mode='nearest', align_corners=None)
+
+    def forward(self, x):
+        x = self.v(x)
+        x = self.conv(x)
+        x = self.upsample(x)
+        return x
+
+
 class FCN8(nn.Module):
 
     def __init__(self, num_classes):

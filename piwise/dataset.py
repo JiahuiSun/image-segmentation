@@ -1,51 +1,48 @@
 import numpy as np
-import os
-
+from os.path import join as pjoin
 from PIL import Image
-
+import torch
 from torch.utils.data import Dataset
+from torchvision import transforms
 
-EXTENSIONS = ['.jpg', '.png']
-
-def load_image(file):
-    return Image.open(file)
-
-def is_image(filename):
-    return any(filename.endswith(ext) for ext in EXTENSIONS)
-
-def image_path(root, basename, extension):
-    return os.path.join(root, f'{basename}{extension}')
-
-def image_basename(filename):
-    return os.path.basename(os.path.splitext(filename)[0])
 
 class VOC12(Dataset):
-
-    def __init__(self, root, input_transform=None, target_transform=None):
-        self.images_root = os.path.join(root, 'images')
-        self.labels_root = os.path.join(root, 'labels')
-
-        self.filenames = [image_basename(f)
-            for f in os.listdir(self.labels_root) if is_image(f)]
-        self.filenames.sort()
-
-        self.input_transform = input_transform
-        self.target_transform = target_transform
+    """
+    root: dir to VOC2012
+    img_size: image size after preprocess
+    split: data type, train or val
+    is_transform:
+    """
+    def __init__(self, root, img_size=(256, 256), split='train', is_transform=True):
+        self.img_dir = pjoin(root, 'JPEGImages')
+        self.lab_dir = pjoin(root, 'SegmentationClass')
+        self.img_size = img_size
+        self.split = split
+        self.is_transform = is_transform
+        self.data_path = pjoin(root, "ImageSets/Segmentation", split+'.txt')
+        with open(self.data_path) as fout:
+            self.file_list = [i.rstrip() for i in fout.readlines()]
+        self.NUM_CLASSES = 21
+        self.input_transform = transforms.Compose([
+            transforms.ToTensor(),
+            transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
+        ])
 
     def __getitem__(self, index):
-        filename = self.filenames[index]
+        filename = self.file_list[index]
+        img = Image.open(pjoin(self.img_dir, filename+'.jpg'))
+        lab = Image.open(pjoin(self.lab_dir, filename+'.png'))
+        if self.is_transform:
+            img, lab = self.transform(img, lab)
+        return img, lab
 
-        with open(image_path(self.images_root, filename, '.jpg'), 'rb') as f:
-            image = load_image(f).convert('RGB')
-        with open(image_path(self.labels_root, filename, '.png'), 'rb') as f:
-            label = load_image(f).convert('P')
-
-        if self.input_transform is not None:
-            image = self.input_transform(image)
-        if self.target_transform is not None:
-            label = self.target_transform(label)
-
-        return image, label
+    def transform(self, img, lab):
+        img = img.resize((self.img_size[0], self.img_size[1]))
+        lab = lab.resize((self.img_size[0], self.img_size[1]))
+        img = self.input_transform(img)
+        lab = torch.from_numpy(np.array(lab)).long()
+        lab[lab == 255] = 0
+        return img, lab
 
     def __len__(self):
-        return len(self.filenames)
+        return len(self.file_list)
