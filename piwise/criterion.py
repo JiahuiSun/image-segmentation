@@ -40,5 +40,5 @@ def cross_entropy2d(input, target, reduction='mean', weight=None):
         input = F.interpolate(input, size=(ht, wt), mode="bilinear", align_corners=True)
     input = input.transpose(1, 2).transpose(2, 3).contiguous().view(-1, c)
     target = target.view(-1)
-    loss = F.cross_entropy(input, target, reduction=reduction, weight=weight)
+    loss = F.cross_entropy(input, target, reduction=reduction, weight=weight, ignore_index=250)
     return loss
