@@ -3,15 +3,13 @@ import torch
 import os, time, sys
 from os.path import join as pjoin
 from PIL import Image
-import imageio
-import scipy.misc as misc
 import argparse
 from torch.utils.data import DataLoader
 from torchvision.transforms import ToPILImage
 
+import models
 from utils import convert_state_dict
-from piwise.dataset import VOC12
-from piwise.network import FCN8, FCN16, FCN32, UNet, PSPNet, SegNet, ZZ16, fcn16s
+from dataset.dataset import VOC12
 
 
 def main(args):
@@ -28,22 +26,7 @@ def main(args):
     val_loader = DataLoader(val_dataset, num_workers=args.num_workers, batch_size=args.batch_size)
     n_classes = val_dataset.NUM_CLASSES
     # ========= Init model ==========
-    if args.model == 'fcn8':
-        model = FCN8(n_classes)
-    if args.model == 'fcn16s':
-        model = fcn16s(n_classes)
-    if args.model == 'fcn32':
-        model = FCN32(n_classes)
-    if args.model == 'fcn32':
-        model = FCN32(n_classes)
-    if args.model == 'unet':
-        model = UNet(n_classes)
-    if args.model == 'pspnet':
-        model = PSPNet(n_classes)
-    if args.model == 'segnet':
-        model = SegNet(n_classes)
-    if args.model == 'zz16':
-        model = ZZ16(n_classes)
+    model = models.get_model(name=args.model, n_classes=n_classes)
     model = model.to(device)
     # model = torch.nn.DataParallel(model, device_ids=range(torch.cuda.device_count()))
     best_model_path = pjoin(args.model_path, args.model+'_best_model.pkl')
@@ -64,7 +47,7 @@ def main(args):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser('Image Segmentation')
     parser.add_argument('--cuda', action='store_true')
-    parser.add_argument('--model', type=str, default='zz16')
+    parser.add_argument('--model', type=str, default='fcn8s')
     parser.add_argument('--data-dir', type=str, default='/home/jjou/sunjiahui/MLproject/dataset/VOCdevkit/VOC2012')
     parser.add_argument('--model-path', type=str, default='./saved')
     parser.add_argument('--img-path', type=str, default='./2007_000129.jpg')
