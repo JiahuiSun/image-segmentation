@@ -15,7 +15,7 @@ from piwise.network import FCN8, FCN16, FCN32, UNet, PSPNet, SegNet, ZZ16, fcn16
 from piwise.criterion import CrossEntropyLoss2d, cross_entropy2d
 
 
-def train(epoch, model, train_loader, criterion, optimizer, device):
+def train(epoch, model, train_loader, criterion, optimizer, device, logger):
     model.train()
     st = time.time()
     for step, (img, lab) in enumerate(train_loader):
@@ -27,13 +27,13 @@ def train(epoch, model, train_loader, criterion, optimizer, device):
         loss.backward()
         optimizer.step()
         if (step+1) % args.print_freq == 0:
-            print(f'Epoch: [{epoch}][{step+1}/{len(train_loader)}]\t'
+            logger.write(f'Epoch: [{epoch}][{step+1}/{len(train_loader)}]\t'
                   f'Loss: {loss.item():.4f}\t'
                   f"lr: {optimizer.param_groups[0]['lr']:.6f}\t")
-    print(f'Epoch {epoch} cost: {round(time.time()-st)}s')
+    logger.write(f'Epoch {epoch} cost: {round(time.time()-st)}s')
 
 
-def main(args):
+def main(args, logger):
     # ========= Setup device and seed ============
     np.random.seed(42)
     torch.manual_seed(42)
@@ -68,30 +68,29 @@ def main(args):
     if args.model == 'segnet':
         model = SegNet(n_classes)
     if args.model == 'zz16':
-        model = ZZ16(n_classes)
+        model = ZZ16(n_classes, val_dataset.img_size)
     model = model.to(device)
-    model = torch.nn.DataParallel(model, device_ids=range(torch.cuda.device_count()))
+    # model = torch.nn.DataParallel(model, device_ids=range(torch.cuda.device_count()))
     # ========= Setup optimizer, scheduler and loss ==========
     # optimizer = Adam(model.parameters(), lr=args.lr)
     # SGD(model.parameters(), 1e-4, .9, 2e-5)
-    optimizer = SGD(model.parameters(), lr=1e-5, momentum=0.99, weight_decay=0.0005)
+    optimizer = SGD(model.parameters(), lr=1e-10, momentum=0.99, weight_decay=0.0005)
     scheduler = torch.optim.lr_scheduler.StepLR(optimizer, 50, 0.5)
     criterion = cross_entropy2d
     # ============= Begin training ==============
     start_epoch = 0
     if args.resume:
-        print("Loading checkpoint from '{}'".format(args.resume))
+        logger.write("Loading checkpoint from '{}'".format(args.resume))
         checkpoint = torch.load(args.resume)
         model.load_state_dict(checkpoint['state_dict'])
         optimizer.load_state_dict(checkpoint["optimizer_state"])
         scheduler.load_state_dict(checkpoint["scheduler_state"])
         start_epoch = checkpoint['epoch']
-    # TODO: meaning of metrics
     val_loss_meter = AverageMeter()
     running_metrics_val = RunningScore(train_dataset.NUM_CLASSES)
     best_iou = -100.0
     for epoch in range(start_epoch, args.num_epochs):
-        train(epoch, model, train_loader, criterion, optimizer, device)
+        train(epoch, model, train_loader, criterion, optimizer, device, logger)
         scheduler.step()
         # =========== validation =================
         model.eval()
@@ -107,7 +106,7 @@ def main(args):
                 val_loss_meter.update(val_loss.item())
         score, class_iou = running_metrics_val.get_scores()
         for k, v in score.items():
-            print("{}: {}".format(k, v))
+            logger.write("{}: {}".format(k, v))
         # for k, v in class_iou.items():
         #     print("{}: {}".format(k, v))
         val_loss_meter.reset()
@@ -131,8 +130,7 @@ if __name__ == '__main__':
     parser.add_argument('--model', type=str, default='zz16')
     parser.add_argument('--save-dir', type=str, default='./saved')
     parser.add_argument('--data-dir', type=str, default='/home/jjou/sunjiahui/MLproject/dataset/VOCdevkit/VOC2012')
-    parser.add_argument('--img-size', type=int, default=256)
-    parser.add_argument('--lr', type=float,  default=0.001)
+    parser.add_argument('--img-size', type=int, default=224)
     parser.add_argument('--resume', type=str, default=None)
     parser.add_argument('--num-epochs', type=int, default=30)
     parser.add_argument('--num-workers', type=int, default=4)
@@ -140,5 +138,6 @@ if __name__ == '__main__':
     parser.add_argument('--print-freq', type=int, default=30)
     args = parser.parse_args()
 
-    sys.stdout = Logger(pjoin(args.save_dir, f'{args.model}_train.log'))
-    main(args)
+    logger = Logger(pjoin(args.save_dir, f'{args.model}_train.log'))
+    logger.write(f'\nTraining configs: {args}')
+    main(args, logger)

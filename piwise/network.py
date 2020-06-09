@@ -4,7 +4,7 @@ import torch.nn.init as init
 import torch.nn.functional as F
 from torch.utils import model_zoo
 from torchvision import models
-
+import numpy as np
 import functools
 
 
@@ -50,11 +50,11 @@ class vgg1(nn.Module):
 
 
 class ZZ16(nn.Module):
-    def __init__(self, num_classes):
+    def __init__(self, num_classes, img_size):
         super(ZZ16, self).__init__()
         self.v = vgg1()
         self.conv = nn.Conv2d(512, num_classes, 1, 1, 0)
-        self.upsample = nn.Upsample((256, 256), mode='nearest', align_corners=None)
+        self.upsample = nn.Upsample(img_size, mode='nearest', align_corners=None)
 
     def forward(self, x):
         x = self.v(x)
@@ -179,12 +179,25 @@ class fcn16s(nn.Module):
             l2.bias.data = l1.bias.data[:n_class]
 
 
+def get_upsampling_weight(in_channels, out_channels, kernel_size):
+    """Make a 2D bilinear kernel suitable for upsampling"""
+    factor = (kernel_size + 1) // 2
+    if kernel_size % 2 == 1:
+        center = factor - 1
+    else:
+        center = factor - 0.5
+    og = np.ogrid[:kernel_size, :kernel_size]
+    filt = (1 - abs(og[0] - center) / factor) * (1 - abs(og[1] - center) / factor)
+    weight = np.zeros((in_channels, out_channels, kernel_size, kernel_size), dtype=np.float64)
+    weight[range(in_channels), range(out_channels), :, :] = filt
+    return torch.from_numpy(weight).float()
+
+
 class fcn8s(nn.Module):
     def __init__(self, n_classes=21, learned_billinear=True):
         super(fcn8s, self).__init__()
         self.learned_billinear = learned_billinear
         self.n_classes = n_classes
-        self.loss = functools.partial(cross_entropy2d, size_average=False)
 
         self.conv_block1 = nn.Sequential(
             nn.Conv2d(3, 64, 3, padding=100),

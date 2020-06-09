@@ -40,7 +40,6 @@ class VOC12(Dataset):
         if self.img_size == ("same", "same"):
             pass
         else:
-            # TODO: resize make figure very strange, (300, 500) -> (256, 256)
             img = img.resize((self.img_size[0], self.img_size[1]))
             lab = lab.resize((self.img_size[0], self.img_size[1]))
         img = self.input_transform(img)

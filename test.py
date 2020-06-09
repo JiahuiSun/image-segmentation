@@ -53,7 +53,7 @@ def main(args):
     with torch.no_grad():
         img = Image.open(args.img_path)
         resize_img = img.resize((val_dataset.img_size[0], val_dataset.img_size[1]))
-        trans_img = val_dataset.input_transform(resize_img).unsqueeze(0).to(device)
+        trans_img = val_dataset.input_transform(img).unsqueeze(0).to(device)
         out = model(trans_img)
         pred = np.squeeze(out.data.max(1)[1].cpu().numpy(), axis=0)
         # pred = torch.argmax(out.squeeze(), dim=0).cpu().numpy()
