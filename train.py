@@ -3,13 +3,14 @@ import os, time, sys
 from os.path import join as pjoin
 import argparse
 import torch
+import torch.nn as nn
 from torch.optim import SGD, Adam
 from torch.utils.data import DataLoader
 import torchvision
 
 from utils import AverageMeter, RunningScore, Logger
 from dataset.dataset import VOC12
-from loss.criterion import cross_entropy2d
+from loss.criterion import cross_entropy2d, CrossEntropyLoss2d
 import models
 
 
@@ -17,8 +18,7 @@ def main(args, logger):
     # ========= Setup device and seed ============
     np.random.seed(42)
     torch.manual_seed(42)
-    # if args.cuda:
-    if True:
+    if args.cuda:
         torch.cuda.manual_seed_all(42)
         device = 'cuda'
     else:
@@ -30,17 +30,20 @@ def main(args, logger):
     val_loader = DataLoader(val_dataset, num_workers=args.num_workers, batch_size=args.batch_size)
     n_classes = val_dataset.NUM_CLASSES
     # ================== Init model ===================
-    vgg16 = torchvision.models.vgg16(pretrained=True)
-    model = models.get_model(name=args.model, n_classes=n_classes)
-    model.init_vgg16_params(vgg16)
+    if args.model in ['fcn8s', 'fcn16s', 'fcn32s']:
+        vgg16 = torchvision.models.vgg16(pretrained=True)
+        model = models.get_model(name=args.model, n_classes=n_classes)
+        model.init_vgg16_params(vgg16)
+    else:
+        model = models.get_model(name=args.model, n_classes=n_classes)
     model = model.to(device)
     # model = torch.nn.DataParallel(model, device_ids=range(torch.cuda.device_count()))
     # ========= Setup optimizer, scheduler and loss ==========
     # optimizer = Adam(model.parameters(), lr=args.lr)
     # SGD(model.parameters(), 1e-4, .9, 2e-5)
-    optimizer = SGD(model.parameters(), lr=1e-4, momentum=0.99, weight_decay=0.0005)
-    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, 10, 0.5)
-    criterion = cross_entropy2d
+    optimizer = SGD(model.parameters(), lr=args.lr, momentum=0.99, weight_decay=0.0005)
+    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, 5, 0.1)
+    criterion = nn.CrossEntropyLoss(ignore_index=255)
     # ============= Begin training ==============
     start_epoch = 0
     if args.resume:
@@ -109,12 +112,14 @@ if __name__ == '__main__':
     parser.add_argument('--model', type=str, default='fcn16s')
     parser.add_argument('--save-dir', type=str, default='./saved')
     parser.add_argument('--data-dir', type=str, default='/home/jjou/sunjiahui/MLproject/dataset/VOCdevkit/VOC2012')
-    parser.add_argument('--img-size', type=int, default=224)
     parser.add_argument('--resume', type=str, default=None)
-    parser.add_argument('--num-epochs', type=int, default=30)
     parser.add_argument('--num-workers', type=int, default=4)
-    parser.add_argument('--batch-size', type=int, default=16)
+    parser.add_argument('--batch-size', type=int, default=8)
     parser.add_argument('--print-freq', type=int, default=30)
+
+    parser.add_argument('--img-size', type=int, default=224)
+    parser.add_argument('--lr', type=float, default=1e-4)
+    parser.add_argument('--num-epochs', type=int, default=30)
     args = parser.parse_args()
 
     logger = Logger(pjoin(args.save_dir, f'{args.model}_train.log'))

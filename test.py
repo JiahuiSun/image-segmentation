@@ -26,7 +26,12 @@ def main(args):
     val_loader = DataLoader(val_dataset, num_workers=args.num_workers, batch_size=args.batch_size)
     n_classes = val_dataset.NUM_CLASSES
     # ========= Init model ==========
-    model = models.get_model(name=args.model, n_classes=n_classes)
+    if args.model in ['fcn8s', 'fcn16s', 'fcn32s']:
+        vgg16 = torchvision.models.vgg16(pretrained=True)
+        model = models.get_model(name=args.model, n_classes=n_classes)
+        model.init_vgg16_params(vgg16)
+    else:
+        model = models.get_model(name=args.model, n_classes=n_classes)
     model = model.to(device)
     # model = torch.nn.DataParallel(model, device_ids=range(torch.cuda.device_count()))
     best_model_path = pjoin(args.model_path, args.model+'_best_model.pkl')

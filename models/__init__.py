@@ -1,12 +1,14 @@
 
-from .fcn import fcn8s, fcn16s, fcn32s
-from .unet import unet
+from .fcn import fcn8s, fcn16s, fcn32s, FCN8
+from .unet import unets, UNet
 
 __factory = {
     'fcn16s': fcn16s,
     'fcn8s': fcn8s,
+    'fcn8': FCN8,
     'fcn32s': fcn32s,
-    'unet': unet
+    'unets': unets,
+    'unet': UNet
 }
 
 

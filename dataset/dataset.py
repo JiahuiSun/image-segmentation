@@ -44,7 +44,7 @@ class VOC12(Dataset):
             lab = lab.resize((self.img_size[0], self.img_size[1]))
         img = self.input_transform(img)
         lab = torch.from_numpy(np.array(lab)).long()
-        lab[lab == 255] = 0
+        # lab[lab == 255] = 0
         return img, lab
     
     def decode_segmap(self, image):
