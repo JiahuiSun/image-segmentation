@@ -33,7 +33,6 @@ def main(args):
     else:
         model = models.get_model(name=args.model, n_classes=n_classes)
     model = model.to(device)
-    # model = torch.nn.DataParallel(model, device_ids=range(torch.cuda.device_count()))
     best_model_path = pjoin(args.model_path, f'{args.model}_best_model.pkl')
     # best_model_path = pjoin(args.model_path, args.model, 'best_model.pkl')
     state = convert_state_dict(torch.load(best_model_path)["model_state"])
