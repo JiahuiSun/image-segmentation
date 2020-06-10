@@ -75,7 +75,7 @@ class VOC12(Dataset):
         r = np.zeros_like(image).astype(np.uint8)
         g = np.zeros_like(image).astype(np.uint8)
         b = np.zeros_like(image).astype(np.uint8)
-        for l in range(0, self.NUM_CLASSES):
+        for l in range(0, self.n_classes):
             idx = image == l
             r[idx] = label_colors[l, 0]
             g[idx] = label_colors[l, 1]
