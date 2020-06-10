@@ -14,15 +14,25 @@ class VOC12(Dataset):
     is_transform:
     """
     def __init__(self, root, img_size=256, split='train', is_transform=True):
-        self.img_dir = pjoin(root, 'JPEGImages')
-        self.lab_dir = pjoin(root, 'SegmentationClass')
+        assert split in ['train', 'val', 'test']
+        if split == 'train': 
+            self.img_dir = pjoin(root, 'benchmark_RELEASE', 'dataset', 'img')
+            self.lab_dir = pjoin(root, 'benchmark_RELEASE', 'dataset', 'cls')
+            self.data_path = pjoin(root, 'benchmark_RELEASE', 'dataset', 'train.txt')
+        elif split == 'val':
+            self.img_dir = pjoin(root, 'VOC2012', 'JPEGImages')
+            self.lab_dir = pjoin(root, 'VOC2012', 'SegmentationClass')
+            self.data_path = pjoin(root, 'VOC2012', 'ImageSets', 'Segmentation', 'seg11valid.txt')
+        else:
+            self.img_dir = pjoin(root, 'VOC2012', 'JPEGImages')
+            self.lab_dir = pjoin(root, 'VOC2012', 'SegmentationClass')
+            self.data_path = pjoin(root, 'VOC2012', 'ImageSets', 'Segmentation', 'val.txt')
         self.img_size = img_size if isinstance(img_size, tuple) else (img_size, img_size)
         self.split = split
         self.is_transform = is_transform
-        self.data_path = pjoin(root, "ImageSets/Segmentation", split+'.txt')
         with open(self.data_path) as fout:
             self.file_list = [i.rstrip() for i in fout.readlines()]
-        self.NUM_CLASSES = 21
+        self.n_classes = 21
         self.input_transform = transforms.Compose([
             transforms.ToTensor(),
             transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
@@ -30,6 +40,11 @@ class VOC12(Dataset):
 
     def __getitem__(self, index):
         filename = self.file_list[index]
+        if self.split == 'test':
+            img = Image.open(pjoin(self.img_dir, filename+'.jpg'))
+            img = img.resize((self.img_size[0], self.img_size[1]))
+            img = self.input_transform(img)
+            return filename, img
         img = Image.open(pjoin(self.img_dir, filename+'.jpg'))
         lab = Image.open(pjoin(self.lab_dir, filename+'.png'))
         if self.is_transform:

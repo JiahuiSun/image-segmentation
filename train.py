@@ -28,7 +28,7 @@ def main(args, logger):
     val_dataset = VOC12(args.data_dir, img_size=args.img_size, split='val')
     train_loader = DataLoader(train_dataset, num_workers=args.num_workers, batch_size=args.batch_size, shuffle=True)
     val_loader = DataLoader(val_dataset, num_workers=args.num_workers, batch_size=args.batch_size)
-    n_classes = val_dataset.NUM_CLASSES
+    n_classes = val_dataset.n_classes
     # ================== Init model ===================
     if args.model in ['fcn8s', 'fcn16s', 'fcn32s']:
         vgg16 = torchvision.models.vgg16(pretrained=True)
@@ -39,8 +39,6 @@ def main(args, logger):
     model = model.to(device)
     # model = torch.nn.DataParallel(model, device_ids=range(torch.cuda.device_count()))
     # ========= Setup optimizer, scheduler and loss ==========
-    # optimizer = Adam(model.parameters(), lr=args.lr)
-    # SGD(model.parameters(), 1e-4, .9, 2e-5)
     optimizer = SGD(model.parameters(), lr=args.lr, momentum=0.99, weight_decay=0.0005)
     scheduler = torch.optim.lr_scheduler.StepLR(optimizer, 5, 0.1)
     criterion = nn.CrossEntropyLoss(ignore_index=255)
@@ -55,7 +53,7 @@ def main(args, logger):
         start_epoch = checkpoint['epoch']
     logger.write(f'start epoch: {start_epoch}, n_train: {len(train_loader.dataset)}, n_val: {len(val_loader.dataset)}')
     val_loss_meter = AverageMeter()
-    running_metrics_val = RunningScore(train_dataset.NUM_CLASSES)
+    running_metrics_val = RunningScore(n_classes)
     best_iou = -100.0
     for epoch in range(start_epoch, args.num_epochs):
         model.train()
@@ -102,19 +100,19 @@ def main(args, logger):
                 "scheduler_state": scheduler.state_dict(),
                 "best_iou": best_iou,
             }
-            save_path = pjoin(args.save_dir, f"{args.model}_best_model.pkl")
+            save_path = pjoin(args.save_dir, args.model, "best_model.pkl")
             torch.save(state, save_path)
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser('Image Segmentation')
     parser.add_argument('--cuda', action='store_true')
-    parser.add_argument('--model', type=str, default='fcn16s')
+    parser.add_argument('--model', type=str, default='fcn16')
     parser.add_argument('--save-dir', type=str, default='./saved')
-    parser.add_argument('--data-dir', type=str, default='/home/jjou/sunjiahui/MLproject/dataset/VOCdevkit/VOC2012')
+    parser.add_argument('--data-dir', type=str, default='/home/jjou/sunjiahui/MLproject/dataset/VOCdevkit')
     parser.add_argument('--resume', type=str, default=None)
     parser.add_argument('--num-workers', type=int, default=4)
-    parser.add_argument('--batch-size', type=int, default=8)
+    parser.add_argument('--batch-size', type=int, default=16)
     parser.add_argument('--print-freq', type=int, default=30)
 
     parser.add_argument('--img-size', type=int, default=224)
@@ -122,6 +120,6 @@ if __name__ == '__main__':
     parser.add_argument('--num-epochs', type=int, default=30)
     args = parser.parse_args()
 
-    logger = Logger(pjoin(args.save_dir, f'{args.model}_train.log'))
+    logger = Logger(pjoin(args.save_dir, args.model, 'train.log'))
     logger.write(f'\nTraining configs: {args}')
     main(args, logger)
