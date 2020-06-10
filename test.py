@@ -33,9 +33,8 @@ def main(args):
     else:
         model = models.get_model(name=args.model, n_classes=n_classes)
     model = model.to(device)
-    best_model_path = pjoin(args.model_path, f'{args.model}_best_model.pkl')
     # best_model_path = pjoin(args.model_path, args.model, 'best_model.pkl')
-    state = convert_state_dict(torch.load(best_model_path)["model_state"])
+    state = convert_state_dict(torch.load(args.model_path)["model_state"])
     model.load_state_dict(state)
     model.eval()
     # ====================== Only one image ==========================
@@ -56,7 +55,7 @@ def main(args):
             out = model(img)
             pred = out.data.max(1)[1].squeeze_(1).squeeze_(0).cpu().numpy()
             decoded = val_dataset.decode_segmap(pred)
-            ToPILImage()(decoded).save(pjoin(args.save_dir, args.model, name+'.png'))
+            ToPILImage()(decoded).save(pjoin(args.save_dir, args.model, f'{name}_{args.img_size}.png'))
 
 
 if __name__ == '__main__':

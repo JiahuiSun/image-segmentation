@@ -100,7 +100,7 @@ def main(args, logger):
                 "scheduler_state": scheduler.state_dict(),
                 "best_iou": best_iou,
             }
-            save_path = pjoin(args.save_dir, args.model, "best_model.pkl")
+            save_path = pjoin(args.save_dir, args.model, f'{args.img_size}.pkl')
             torch.save(state, save_path)
 
 
