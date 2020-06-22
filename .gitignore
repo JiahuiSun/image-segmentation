@@ -108,3 +108,5 @@ venv.bak/
 *.pkl
 *.pth
 saved/
+backup/
+visual/

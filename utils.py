@@ -40,10 +40,10 @@ class RunningScore(object):
 
         return (
             {
-                "Overall Acc: \t": acc,
-                "Mean Acc : \t": acc_cls,
-                "FreqW Acc : \t": fwavacc,
-                "Mean IoU : \t": mean_iu,
+                "Overall Acc": acc,
+                "Mean Acc": acc_cls,
+                "FreqW Acc": fwavacc,
+                "Mean IoU": mean_iu,
             },
             cls_iu,
         )
@@ -120,7 +120,7 @@ class Logger(object):
         self.file = None
         if fpath is not None:
             mkdir_if_missing(os.path.dirname(fpath))
-            self.file = open(fpath, 'a')
+            self.file = open(fpath, 'w')
 
     def __del__(self):
         self.close()

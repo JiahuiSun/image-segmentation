@@ -16,13 +16,16 @@ class VOC12(Dataset):
     def __init__(self, root, img_size=256, split='train', is_transform=True):
         assert split in ['train', 'val', 'test']
         if split == 'train': 
-            self.img_dir = pjoin(root, 'benchmark_RELEASE', 'dataset', 'img')
-            self.lab_dir = pjoin(root, 'benchmark_RELEASE', 'dataset', 'cls')
-            self.data_path = pjoin(root, 'benchmark_RELEASE', 'dataset', 'train.txt')
+            # self.img_dir = pjoin(root, 'benchmark_RELEASE', 'dataset', 'img')
+            # self.lab_dir = pjoin(root, 'benchmark_RELEASE', 'dataset', 'cls')
+            # self.data_path = pjoin(root, 'benchmark_RELEASE', 'dataset', 'train.txt')
+            self.img_dir = pjoin(root, 'VOC2012', 'JPEGImages')
+            self.lab_dir = pjoin(root, 'VOC2012', 'SegmentationClass')
+            self.data_path = pjoin(root, 'VOC2012', 'ImageSets', 'Segmentation', 'train.txt')
         elif split == 'val':
             self.img_dir = pjoin(root, 'VOC2012', 'JPEGImages')
             self.lab_dir = pjoin(root, 'VOC2012', 'SegmentationClass')
-            self.data_path = pjoin(root, 'VOC2012', 'ImageSets', 'Segmentation', 'seg11valid.txt')
+            self.data_path = pjoin(root, 'VOC2012', 'ImageSets', 'Segmentation', 'val.txt')
         else:
             self.img_dir = pjoin(root, 'VOC2012', 'JPEGImages')
             self.lab_dir = pjoin(root, 'VOC2012', 'SegmentationClass')
@@ -42,7 +45,8 @@ class VOC12(Dataset):
         filename = self.file_list[index]
         if self.split == 'test':
             img = Image.open(pjoin(self.img_dir, filename+'.jpg'))
-            img = img.resize((self.img_size[0], self.img_size[1]))
+            if self.img_size != (0, 0):
+                img = img.resize((self.img_size[0], self.img_size[1]))
             img = self.input_transform(img)
             return filename, img
         img = Image.open(pjoin(self.img_dir, filename+'.jpg'))
@@ -52,7 +56,7 @@ class VOC12(Dataset):
         return img, lab
 
     def transform(self, img, lab):
-        if self.img_size == ("same", "same"):
+        if self.img_size == (0, 0):
             pass
         else:
             img = img.resize((self.img_size[0], self.img_size[1]))
